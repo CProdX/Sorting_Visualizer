@@ -35,8 +35,28 @@ typedef struct {
     Stats stats;
     int state;  // 0=not started, 1=running, 2=finished
     // State variables for each algorithm
+    float key;
     int i, j, min_idx, pi;
+    int phase;
     int left, right, mid;
+    int stack_low[ARRAY_SIZE];
+    int stack_high[ARRAY_SIZE];
+    int stack_top;
+    int part_low;
+    int part_high;
+    int part_i;
+    int part_j;
+    float pivot;
+    bool partition_active;
+    float temp[ARRAY_SIZE];
+    int merge_width;
+    int merge_left;
+    int merge_mid;
+    int merge_right;
+    int merge_i;
+    int merge_j;
+    int merge_k;
+    bool merge_active;
     bool finished;
 } AlgoState;
 
@@ -224,7 +244,7 @@ static void run_merge_benchmark(float* arr, int n, Stats* stats) {
 // Step-by-step state-based sorting for simultaneous animation
 static bool bubble_step(AlgoState* algo, int n) {
     if (!algo->finished) {
-        if (algo->i == 0) algo->stats.start_time = SDL_GetTicks();
+        if (algo->stats.start_time == 0) algo->stats.start_time = SDL_GetTicks();
         
         if (algo->i < n - 1) {
             if (algo->j < n - algo->i - 1) {
@@ -252,14 +272,9 @@ static bool bubble_step(AlgoState* algo, int n) {
 
 static bool selection_step(AlgoState* algo, int n) {
     if (!algo->finished) {
-        if (algo->i == 0) algo->stats.start_time = SDL_GetTicks();
+        if (algo->stats.start_time == 0) algo->stats.start_time = SDL_GetTicks();
         
         if (algo->i < n - 1) {
-            if (algo->j == -1) {
-                algo->min_idx = algo->i;
-                algo->j = algo->i + 1;
-            }
-            
             if (algo->j < n) {
                 algo->stats.comparisons++;
                 algo->stats.memory_accesses += 2;
@@ -275,7 +290,8 @@ static bool selection_step(AlgoState* algo, int n) {
                     algo->stats.memory_accesses += 4;
                 }
                 algo->i++;
-                algo->j = -1;
+                algo->min_idx = algo->i;
+                algo->j = algo->i + 1;
             }
         } else {
             algo->finished = true;
@@ -288,38 +304,36 @@ static bool selection_step(AlgoState* algo, int n) {
 
 static bool insertion_step(AlgoState* algo, int n) {
     if (!algo->finished) {
-        if (algo->i == 0) {
+        if (algo->stats.start_time == 0) {
             algo->stats.start_time = SDL_GetTicks();
-            algo->i = 1;
         }
         
         if (algo->i < n) {
-            if (algo->j == -1) {
+            if (algo->phase == 0) {
+                algo->key = algo->values[algo->i];
+                algo->stats.memory_accesses++;
                 algo->j = algo->i - 1;
+                algo->phase = 1;
             }
             
-            float key = algo->values[algo->i];
-            algo->stats.memory_accesses++;
-            
-            if (algo->j < 0) {
-                // Insert key at position 0
-                algo->values[0] = key;
-                algo->stats.memory_accesses++;
-                algo->i++;
-                algo->j = -1;
-            } else {
+            if (algo->j >= 0) {
                 algo->stats.comparisons++;
                 algo->stats.memory_accesses++;
-                if (algo->values[algo->j] > key) {
+                if (algo->values[algo->j] > algo->key) {
                     algo->values[algo->j + 1] = algo->values[algo->j];
                     algo->stats.memory_accesses++;
                     algo->j--;
                 } else {
-                    algo->values[algo->j + 1] = key;
+                    algo->values[algo->j + 1] = algo->key;
                     algo->stats.memory_accesses++;
                     algo->i++;
-                    algo->j = -1;
+                    algo->phase = 0;
                 }
+            } else {
+                algo->values[0] = algo->key;
+                algo->stats.memory_accesses++;
+                algo->i++;
+                algo->phase = 0;
             }
         } else {
             algo->finished = true;
@@ -332,23 +346,68 @@ static bool insertion_step(AlgoState* algo, int n) {
 
 static bool quicksort_step(AlgoState* algo, int n) {
     if (!algo->finished) {
-        if (algo->i == 0) algo->stats.start_time = SDL_GetTicks();
-        
-        // Simplified quicksort: just do a few comparisons per frame
-        if (algo->i < n - 1) {
-            algo->stats.comparisons++;
-            algo->stats.memory_accesses += 2;
-            if (algo->values[algo->i] > algo->values[algo->i + 1]) {
-                float t = algo->values[algo->i];
-                algo->values[algo->i] = algo->values[algo->i + 1];
-                algo->values[algo->i + 1] = t;
-                algo->stats.memory_accesses += 4;
+        if (algo->stats.start_time == 0) {
+            algo->stats.start_time = SDL_GetTicks();
+            if (algo->stack_top == 0 && !algo->partition_active) {
+                algo->stack_low[0] = 0;
+                algo->stack_high[0] = n - 1;
+                algo->stack_top = 1;
             }
-            algo->i++;
+        }
+
+        if (!algo->partition_active) {
+            while (algo->stack_top > 0) {
+                algo->stack_top--;
+                algo->part_low = algo->stack_low[algo->stack_top];
+                algo->part_high = algo->stack_high[algo->stack_top];
+                if (algo->part_low < algo->part_high) {
+                    algo->part_i = algo->part_low - 1;
+                    algo->part_j = algo->part_low;
+                    algo->pivot = algo->values[algo->part_high];
+                    algo->stats.memory_accesses++;
+                    algo->partition_active = true;
+                    break;
+                }
+            }
+        }
+
+        if (algo->partition_active) {
+            if (algo->part_j < algo->part_high) {
+                algo->stats.comparisons++;
+                algo->stats.memory_accesses++;
+                if (algo->values[algo->part_j] < algo->pivot) {
+                    algo->part_i++;
+                    float t = algo->values[algo->part_i];
+                    algo->values[algo->part_i] = algo->values[algo->part_j];
+                    algo->values[algo->part_j] = t;
+                    algo->stats.memory_accesses += 4;
+                }
+                algo->part_j++;
+            } else {
+                float t = algo->values[algo->part_i + 1];
+                algo->values[algo->part_i + 1] = algo->values[algo->part_high];
+                algo->values[algo->part_high] = t;
+                algo->stats.memory_accesses += 4;
+
+                int pivot_index = algo->part_i + 1;
+                if (pivot_index + 1 < algo->part_high) {
+                    algo->stack_low[algo->stack_top] = pivot_index + 1;
+                    algo->stack_high[algo->stack_top] = algo->part_high;
+                    algo->stack_top++;
+                }
+                if (algo->part_low < pivot_index - 1) {
+                    algo->stack_low[algo->stack_top] = algo->part_low;
+                    algo->stack_high[algo->stack_top] = pivot_index - 1;
+                    algo->stack_top++;
+                }
+                algo->partition_active = false;
+            }
         } else {
-            algo->finished = true;
-            algo->stats.end_time = SDL_GetTicks();
-            return true;
+            if (algo->stack_top == 0) {
+                algo->finished = true;
+                algo->stats.end_time = SDL_GetTicks();
+                return true;
+            }
         }
     }
     return algo->finished;
@@ -356,23 +415,66 @@ static bool quicksort_step(AlgoState* algo, int n) {
 
 static bool mergesort_step(AlgoState* algo, int n) {
     if (!algo->finished) {
-        if (algo->i == 0) algo->stats.start_time = SDL_GetTicks();
-        
-        // Simplified mergesort: just do a few comparisons per frame
-        if (algo->i < n - 1) {
-            algo->stats.comparisons++;
-            algo->stats.memory_accesses += 2;
-            if (algo->values[algo->i] > algo->values[algo->i + 1]) {
-                float t = algo->values[algo->i];
-                algo->values[algo->i] = algo->values[algo->i + 1];
-                algo->values[algo->i + 1] = t;
-                algo->stats.memory_accesses += 4;
+        if (algo->stats.start_time == 0) {
+            algo->stats.start_time = SDL_GetTicks();
+            if (algo->merge_width == 0) {
+                algo->merge_width = 1;
+                algo->merge_left = 0;
+                algo->merge_active = false;
             }
-            algo->i++;
+            memcpy(algo->temp, algo->values, sizeof(float) * ARRAY_SIZE);
+        }
+
+        if (!algo->merge_active) {
+            if (algo->merge_width >= n) {
+                algo->finished = true;
+                algo->stats.end_time = SDL_GetTicks();
+                return true;
+            }
+
+            if (algo->merge_left < n - 1) {
+                algo->merge_mid = algo->merge_left + algo->merge_width - 1;
+                if (algo->merge_mid >= n - 1) {
+                    algo->merge_mid = n - 1;
+                }
+                algo->merge_right = algo->merge_left + 2 * algo->merge_width - 1;
+                if (algo->merge_right >= n) {
+                    algo->merge_right = n - 1;
+                }
+                algo->merge_i = algo->merge_left;
+                algo->merge_j = algo->merge_mid + 1;
+                algo->merge_k = algo->merge_left;
+                algo->merge_active = true;
+            } else {
+                algo->merge_left = 0;
+                algo->merge_width *= 2;
+                memcpy(algo->temp, algo->values, sizeof(float) * ARRAY_SIZE);
+            }
         } else {
-            algo->finished = true;
-            algo->stats.end_time = SDL_GetTicks();
-            return true;
+            if (algo->merge_i <= algo->merge_mid && algo->merge_j <= algo->merge_right) {
+                algo->stats.comparisons++;
+                algo->stats.memory_accesses += 2;
+                if (algo->temp[algo->merge_i] <= algo->temp[algo->merge_j]) {
+                    algo->values[algo->merge_k++] = algo->temp[algo->merge_i++];
+                } else {
+                    algo->values[algo->merge_k++] = algo->temp[algo->merge_j++];
+                }
+                algo->stats.memory_accesses++;
+            } else if (algo->merge_i <= algo->merge_mid) {
+                algo->values[algo->merge_k++] = algo->temp[algo->merge_i++];
+                algo->stats.memory_accesses++;
+            } else if (algo->merge_j <= algo->merge_right) {
+                algo->values[algo->merge_k++] = algo->temp[algo->merge_j++];
+                algo->stats.memory_accesses++;
+            } else {
+                algo->merge_active = false;
+                algo->merge_left += 2 * algo->merge_width;
+                if (algo->merge_left >= n) {
+                    algo->merge_left = 0;
+                    algo->merge_width *= 2;
+                    memcpy(algo->temp, algo->values, sizeof(float) * ARRAY_SIZE);
+                }
+            }
         }
     }
     return algo->finished;
@@ -395,9 +497,16 @@ static void prepare_compare_view(CompareView* view) {
         view->algo_states[i].finished = false;
         view->algo_states[i].state = 1;  // running
         view->algo_states[i].i = 0;
-        view->algo_states[i].j = -1;  // Used as sentinel for some algorithms
+        view->algo_states[i].j = 0;
         view->algo_states[i].min_idx = 0;
         view->algo_states[i].pi = 0;
+        view->algo_states[i].key = 0.0f;
+        view->algo_states[i].phase = 0;
+        view->algo_states[i].stack_top = 0;
+        view->algo_states[i].partition_active = false;
+        view->algo_states[i].merge_active = false;
+        view->algo_states[i].merge_width = 0;
+        view->algo_states[i].merge_left = 0;
         view->algo_states[i].left = 0;
         view->algo_states[i].right = ARRAY_SIZE - 1;
         view->algo_states[i].mid = 0;
@@ -407,6 +516,25 @@ static void prepare_compare_view(CompareView* view) {
         view->algo_states[i].stats.end_time = 0;
         
         memcpy(view->algo_states[i].values, view->source, sizeof(float) * ARRAY_SIZE);
+        if (i == 0) {
+            view->algo_states[i].j = 0;
+        } else if (i == 1) {
+            view->algo_states[i].j = 1;
+            view->algo_states[i].min_idx = 0;
+        } else if (i == 2) {
+            view->algo_states[i].i = 1;
+            view->algo_states[i].phase = 0;
+            view->algo_states[i].j = 0;
+        } else if (i == 3) {
+            view->algo_states[i].stack_low[0] = 0;
+            view->algo_states[i].stack_high[0] = ARRAY_SIZE - 1;
+            view->algo_states[i].stack_top = 1;
+        } else if (i == 4) {
+            view->algo_states[i].merge_width = 1;
+            view->algo_states[i].merge_left = 0;
+        } else {
+            view->algo_states[i].j = 0;
+        }
         
         view->results[i].name = names[i];
         memcpy(view->results[i].values, view->algo_states[i].values, sizeof(float) * ARRAY_SIZE);
@@ -427,6 +555,18 @@ static SDL_Keycode mode_key_from_point(int x, int y) {
         }
     }
 
+    return SDLK_UNKNOWN;
+}
+
+static SDL_Keycode control_key_from_point(int x, int y) {
+    // Reset button
+    if (x >= 20 && x < 240 && y >= 540 && y < 580) {
+        return SDLK_r;
+    }
+    // Menu button
+    if (x >= 560 && x < 780 && y >= 540 && y < 580) {
+        return SDLK_m;
+    }
     return SDLK_UNKNOWN;
 }
 
@@ -507,6 +647,12 @@ static void apply_sort_selection(SDL_Keycode key, SDL_Renderer* renderer, float*
 
 static TTF_Font* load_font(void) {
     const char* font_candidates[] = {
+        "assets/Rokkitt-Regular.ttf",
+        "assets/Rokkitt-VariableFont_wght.ttf",
+        "/usr/share/fonts/truetype/rokkitt/Rokkitt-Regular.ttf",
+        "/usr/share/fonts/truetype/rokkitt/Rokkitt-VariableFont_wght.ttf",
+        "/usr/share/fonts/googlefonts/Rokkitt-Regular.ttf",
+        "/usr/share/fonts/googlefonts/Rokkitt-VariableFont_wght.ttf",
         "assets/DejaVuSans.ttf",
         "/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
@@ -566,6 +712,7 @@ int main() {
     }
 
     float array[ARRAY_SIZE];
+    float menu_preview[ARRAY_SIZE];
     Student students[ARRAY_SIZE];
     ArrayMode current_mode = MODE_RANDOM;
     Stats stats = {0, 0, 0, 0};
@@ -575,6 +722,8 @@ int main() {
     bool is_student_mode = false;
     bool is_compare_mode = false;
     CompareView compare_view = {0};
+
+    generate_array(menu_preview, ARRAY_SIZE, WINDOW_HEIGHT, MODE_PYRAMID);
 
     while (running) {
         while (SDL_PollEvent(&event)) {
@@ -591,6 +740,7 @@ int main() {
                     stats = (Stats){0, 0, 0, 0};
                     compare_view.ready = false;
                     compare_view.animating = false;
+                    generate_array(menu_preview, ARRAY_SIZE, WINDOW_HEIGHT, MODE_PYRAMID);
                     continue;
                 }
 
@@ -603,6 +753,7 @@ int main() {
                     stats = (Stats){0, 0, 0, 0};
                     compare_view.ready = false;
                     compare_view.animating = false;
+                    generate_array(menu_preview, ARRAY_SIZE, WINDOW_HEIGHT, MODE_PYRAMID);
                     continue;
                 }
 
@@ -617,6 +768,28 @@ int main() {
                 SDL_Keycode key = mode_key_from_point(event.button.x, event.button.y);
                 if (!mode_selected) {
                     apply_mode_selection(key, &current_mode, &is_student_mode, &is_compare_mode, &mode_selected, array, students, &compare_view);
+                } else {
+                    // Check control buttons (reset/menu)
+                    SDL_Keycode ctrl_key = control_key_from_point(event.button.x, event.button.y);
+                    if (ctrl_key == SDLK_r) {
+                        mode_selected = false;
+                        sorted = false;
+                        is_student_mode = false;
+                        is_compare_mode = false;
+                        stats = (Stats){0, 0, 0, 0};
+                        compare_view.ready = false;
+                        compare_view.animating = false;
+                        generate_array(menu_preview, ARRAY_SIZE, WINDOW_HEIGHT, MODE_PYRAMID);
+                    } else if (ctrl_key == SDLK_m) {
+                        mode_selected = false;
+                        sorted = false;
+                        is_student_mode = false;
+                        is_compare_mode = false;
+                        stats = (Stats){0, 0, 0, 0};
+                        compare_view.ready = false;
+                        compare_view.animating = false;
+                        generate_array(menu_preview, ARRAY_SIZE, WINDOW_HEIGHT, MODE_PYRAMID);
+                    }
                 }
             }
 
@@ -626,6 +799,28 @@ int main() {
                 SDL_Keycode key = mode_key_from_point(x, y);
                 if (!mode_selected) {
                     apply_mode_selection(key, &current_mode, &is_student_mode, &is_compare_mode, &mode_selected, array, students, &compare_view);
+                } else {
+                    // Check control buttons (reset/menu) via touch
+                    SDL_Keycode ctrl_key = control_key_from_point(x, y);
+                    if (ctrl_key == SDLK_r) {
+                        mode_selected = false;
+                        sorted = false;
+                        is_student_mode = false;
+                        is_compare_mode = false;
+                        stats = (Stats){0, 0, 0, 0};
+                        compare_view.ready = false;
+                        compare_view.animating = false;
+                        generate_array(menu_preview, ARRAY_SIZE, WINDOW_HEIGHT, MODE_PYRAMID);
+                    } else if (ctrl_key == SDLK_m) {
+                        mode_selected = false;
+                        sorted = false;
+                        is_student_mode = false;
+                        is_compare_mode = false;
+                        stats = (Stats){0, 0, 0, 0};
+                        compare_view.ready = false;
+                        compare_view.animating = false;
+                        generate_array(menu_preview, ARRAY_SIZE, WINDOW_HEIGHT, MODE_PYRAMID);
+                    }
                 }
             }
         }
@@ -638,7 +833,8 @@ int main() {
             int mouse_y = 0;
             SDL_GetMouseState(&mouse_x, &mouse_y);
 
-            draw_array(renderer, array, ARRAY_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT, -1, -1);
+            draw_neutral_background(renderer);
+            draw_menu_preview(renderer, font, menu_preview, ARRAY_SIZE);
             for (int i = 0; i < (int)(sizeof(mode_buttons) / sizeof(mode_buttons[0])); i++) {
                 bool highlighted = point_in_rect(mouse_x, mouse_y, mode_buttons[i].rect);
                 draw_button(renderer, font, mode_buttons[i].label, mode_buttons[i].rect, highlighted);
@@ -648,27 +844,30 @@ int main() {
                 // Animate all 5 algorithms simultaneously
                 if (compare_view.animating) {
                     bool any_running = false;
+                    int steps_per_frame = 1;  // 1 step per algorithm per frame = progressive animation
                     
-                    // Do one step per algorithm per frame for smooth simultaneous animation
-                    if (!compare_view.algo_states[0].finished) {
-                        bubble_step(&compare_view.algo_states[0], ARRAY_SIZE);
-                        any_running = true;
-                    }
-                    if (!compare_view.algo_states[1].finished) {
-                        selection_step(&compare_view.algo_states[1], ARRAY_SIZE);
-                        any_running = true;
-                    }
-                    if (!compare_view.algo_states[2].finished) {
-                        insertion_step(&compare_view.algo_states[2], ARRAY_SIZE);
-                        any_running = true;
-                    }
-                    if (!compare_view.algo_states[3].finished) {
-                        quicksort_step(&compare_view.algo_states[3], ARRAY_SIZE);
-                        any_running = true;
-                    }
-                    if (!compare_view.algo_states[4].finished) {
-                        mergesort_step(&compare_view.algo_states[4], ARRAY_SIZE);
-                        any_running = true;
+                    for (int step = 0; step < steps_per_frame; step++) {
+                        // Step each algorithm
+                        if (!compare_view.algo_states[0].finished) {
+                            bubble_step(&compare_view.algo_states[0], ARRAY_SIZE);
+                            any_running = true;
+                        }
+                        if (!compare_view.algo_states[1].finished) {
+                            selection_step(&compare_view.algo_states[1], ARRAY_SIZE);
+                            any_running = true;
+                        }
+                        if (!compare_view.algo_states[2].finished) {
+                            insertion_step(&compare_view.algo_states[2], ARRAY_SIZE);
+                            any_running = true;
+                        }
+                        if (!compare_view.algo_states[3].finished) {
+                            quicksort_step(&compare_view.algo_states[3], ARRAY_SIZE);
+                            any_running = true;
+                        }
+                        if (!compare_view.algo_states[4].finished) {
+                            mergesort_step(&compare_view.algo_states[4], ARRAY_SIZE);
+                            any_running = true;
+                        }
                     }
                     
                     if (!any_running) {
@@ -685,17 +884,21 @@ int main() {
                 // Draw clean background for compare mode
                 draw_compare_background(renderer);
                 
+                // Draw source array info
+                draw_source_array_mini(renderer, font, compare_view.source, ARRAY_SIZE);
+                
                 // Draw 5 panels: 2 top, 1 center, 2 bottom - centered layout
+                // Adjusted Y positions to accommodate source array header
                 draw_compare_panel(renderer, font, compare_view.results[0].name, compare_view.results[0].values, ARRAY_SIZE,
-                                 compare_view.results[0].stats, (SDL_Rect){25, 18, 240, 220});
+                                 compare_view.results[0].stats, (SDL_Rect){18, 38, 244, 220}, compare_view.algo_states[0].i, compare_view.algo_states[0].j);
                 draw_compare_panel(renderer, font, compare_view.results[1].name, compare_view.results[1].values, ARRAY_SIZE,
-                                 compare_view.results[1].stats, (SDL_Rect){280, 18, 240, 220});
+                                 compare_view.results[1].stats, (SDL_Rect){278, 38, 244, 220}, compare_view.algo_states[1].i, compare_view.algo_states[1].j);
                 draw_compare_panel(renderer, font, compare_view.results[2].name, compare_view.results[2].values, ARRAY_SIZE,
-                                 compare_view.results[2].stats, (SDL_Rect){535, 18, 240, 220});
+                                 compare_view.results[2].stats, (SDL_Rect){538, 38, 244, 220}, compare_view.algo_states[2].i, compare_view.algo_states[2].j);
                 draw_compare_panel(renderer, font, compare_view.results[3].name, compare_view.results[3].values, ARRAY_SIZE,
-                                 compare_view.results[3].stats, (SDL_Rect){152, 258, 240, 220});
+                                 compare_view.results[3].stats, (SDL_Rect){148, 272, 244, 220}, compare_view.algo_states[3].part_i + 1, compare_view.algo_states[3].part_j);
                 draw_compare_panel(renderer, font, compare_view.results[4].name, compare_view.results[4].values, ARRAY_SIZE,
-                                 compare_view.results[4].stats, (SDL_Rect){408, 258, 240, 220});
+                                 compare_view.results[4].stats, (SDL_Rect){408, 272, 244, 220}, compare_view.algo_states[4].merge_i, compare_view.algo_states[4].merge_j);
             } else if (is_student_mode) {
                 draw_students(renderer, font, students, ARRAY_SIZE);
             } else {
@@ -705,16 +908,21 @@ int main() {
                 }
             }
 
-            draw_button(renderer, font, "Press R to reset", (SDL_Rect){20, 540, 220, 40}, false);
-            draw_button(renderer, font, "Press M for menu", (SDL_Rect){560, 540, 220, 40}, false);
+            int mouse_x = 0;
+            int mouse_y = 0;
+            SDL_GetMouseState(&mouse_x, &mouse_y);
+            
+            bool reset_highlighted = (mouse_x >= 20 && mouse_x < 240 && mouse_y >= 540 && mouse_y < 580);
+            bool menu_highlighted = (mouse_x >= 560 && mouse_x < 780 && mouse_y >= 540 && mouse_y < 580);
+            
+            draw_button(renderer, font, "Press R to reset", (SDL_Rect){20, 540, 220, 40}, reset_highlighted);
+            draw_button(renderer, font, "Press M for menu", (SDL_Rect){560, 540, 220, 40}, menu_highlighted);
         }
 
         SDL_RenderPresent(renderer);
         
-        // Frame rate limiting for smooth animation
-        if (is_compare_mode && compare_view.animating) {
-            SDL_Delay(50);  // ~20 FPS for animation visibility
-        }
+        // Frame rate limiting for smooth animation (~60 FPS)
+        SDL_Delay(16);
     }
 
     TTF_CloseFont(font);

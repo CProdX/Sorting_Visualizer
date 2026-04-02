@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include "visual.h"
@@ -15,6 +16,70 @@ static void draw_vertical_gradient(SDL_Renderer* renderer, int width, int height
     }
 }
 
+static void draw_label(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color, int x, int y);
+static void draw_label_solid(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color, int x, int y);
+static void draw_label_bold(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color fg, SDL_Color shadow, int x, int y);
+
+static int load_ascii_art_lines(char lines[][256], int max_lines) {
+    FILE* fp = fopen("asciiart-fr.txt", "r");
+    if (!fp) {
+        return 0;
+    }
+
+    int count = 0;
+    while (count < max_lines && fgets(lines[count], 256, fp) != NULL) {
+        lines[count][strcspn(lines[count], "\r\n")] = '\0';
+        count++;
+    }
+
+    fclose(fp);
+    return count;
+}
+
+void draw_neutral_background(SDL_Renderer* renderer) {
+    SDL_Color bg_top = {14, 28, 50, 255};
+    SDL_Color bg_bottom = {22, 45, 75, 255};
+    draw_vertical_gradient(renderer, 800, 600, bg_top, bg_bottom);
+}
+
+void draw_menu_preview(SDL_Renderer* renderer, TTF_Font* font, float* array, int size) {
+    (void)array;
+    (void)size;
+
+    SDL_Color title_color = {236, 255, 244, 255};
+    SDL_Rect panel = {18, 16, 764, 158};
+
+    static bool loaded = false;
+    static int line_count = 0;
+    static char file_lines[24][256];
+
+    if (!loaded) {
+        line_count = load_ascii_art_lines(file_lines, 24);
+        loaded = true;
+    }
+
+    int y = 24;
+    if (line_count > 0) {
+        for (int i = 0; i < line_count; i++) {
+            int w = 0;
+            int h = 0;
+            if (TTF_SizeText(font, file_lines[i], &w, &h) == 0) {
+                int x = panel.x + (panel.w - w) / 2;
+                draw_label_solid(renderer, font, file_lines[i], title_color, x, y);
+            }
+            y += 22;
+        }
+    } else {
+        const char* missing = "asciiart-fr.txt not found or empty";
+        int w = 0;
+        int h = 0;
+        if (TTF_SizeText(font, missing, &w, &h) == 0) {
+            int x = panel.x + (panel.w - w) / 2;
+            draw_label_solid(renderer, font, missing, title_color, x, y + 32);
+        }
+    }
+}
+
 void draw_compare_background(SDL_Renderer* renderer) {
     SDL_Color bg_top = {9, 20, 39, 255};
     SDL_Color bg_bottom = {16, 42, 74, 255};
@@ -23,13 +88,45 @@ void draw_compare_background(SDL_Renderer* renderer) {
 
 static void draw_label(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color, int x, int y) {
     SDL_Surface* surface = TTF_RenderText_Blended(font, text, color);
+    if (!surface) {
+        return;
+    }
+
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    if (!texture) {
+        SDL_FreeSurface(surface);
+        return;
+    }
 
     SDL_Rect dst = {x, y, surface->w, surface->h};
     SDL_RenderCopy(renderer, texture, NULL, &dst);
 
     SDL_FreeSurface(surface);
     SDL_DestroyTexture(texture);
+}
+
+static void draw_label_solid(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color, int x, int y) {
+    SDL_Surface* surface = TTF_RenderText_Solid(font, text, color);
+    if (!surface) {
+        return;
+    }
+
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    if (!texture) {
+        SDL_FreeSurface(surface);
+        return;
+    }
+
+    SDL_Rect dst = {x, y, surface->w, surface->h};
+    SDL_RenderCopy(renderer, texture, NULL, &dst);
+
+    SDL_FreeSurface(surface);
+    SDL_DestroyTexture(texture);
+}
+
+static void draw_label_bold(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color fg, SDL_Color shadow, int x, int y) {
+    draw_label_solid(renderer, font, text, shadow, x + 1, y + 1);
+    draw_label_solid(renderer, font, text, fg, x, y);
 }
 
 void draw_button(SDL_Renderer* renderer, TTF_Font* font, const char* label, SDL_Rect rect, bool highlighted) {
@@ -75,20 +172,24 @@ void draw_array(SDL_Renderer* renderer, float* array, int size, int window_width
     SDL_Color bg_top = {9, 20, 39, 255};
     SDL_Color bg_bottom = {16, 42, 74, 255};
     int margin_x = 10;
-    int chart_top = 70;
-    int chart_bottom = window_height - 45;
+    int chart_top = 52;
+    int chart_bottom = window_height - 104;
     int chart_height = chart_bottom - chart_top;
     int inner_width = window_width - (2 * margin_x);
     int bar_width = (size > 0) ? inner_width / size : inner_width;
+    int chart_width = bar_width * size;
+    int chart_start_x = (window_width - chart_width) / 2;
 
     if (bar_width < 1) {
         bar_width = 1;
+        chart_width = bar_width * size;
+        chart_start_x = (window_width - chart_width) / 2;
     }
 
     draw_vertical_gradient(renderer, window_width, window_height, bg_top, bg_bottom);
 
     SDL_SetRenderDrawColor(renderer, 130, 180, 245, 70);
-    SDL_RenderDrawLine(renderer, margin_x, chart_bottom, window_width - margin_x, chart_bottom);
+    SDL_RenderDrawLine(renderer, chart_start_x, chart_bottom, chart_start_x + chart_width, chart_bottom);
 
     for (int i = 0; i < size; i++) {
         float normalized = array[i] / (float)window_height;
@@ -105,7 +206,7 @@ void draw_array(SDL_Renderer* renderer, float* array, int size, int window_width
         }
 
         SDL_Rect bar = {
-            .x = margin_x + i * bar_width,
+            .x = chart_start_x + i * bar_width,
             .y = chart_bottom - height,
             .w = bar_width - 1,
             .h = height
@@ -120,7 +221,7 @@ void draw_array(SDL_Renderer* renderer, float* array, int size, int window_width
     }
 }
 
-void draw_array_in_rect(SDL_Renderer* renderer, float* array, int size, SDL_Rect rect) {
+void draw_array_in_rect(SDL_Renderer* renderer, float* array, int size, SDL_Rect rect, int highlight1, int highlight2) {
     int chart_margin_x = 8;
     int chart_margin_y = 8;
     int chart_w = rect.w - (2 * chart_margin_x);
@@ -158,17 +259,73 @@ void draw_array_in_rect(SDL_Renderer* renderer, float* array, int size, SDL_Rect
             .h = h
         };
 
-        SDL_SetRenderDrawColor(renderer, 99, 220, 173, 255);
+        if (i == highlight1 || i == highlight2) {
+            SDL_SetRenderDrawColor(renderer, 255, 60, 60, 255);
+        } else {
+            SDL_SetRenderDrawColor(renderer, 99, 220, 173, 255);
+        }
         SDL_RenderFillRect(renderer, &bar);
     }
 }
 
-void draw_compare_panel(SDL_Renderer* renderer, TTF_Font* font, const char* title, float* array, int size, Stats stats, SDL_Rect rect) {
-    char info_line[160];
+void draw_source_array_mini(SDL_Renderer* renderer, TTF_Font* font, float* array, int size) {
+    SDL_Color title_color = {220, 240, 255, 255};
+    SDL_Color bg_color = {5, 12, 22, 180};
+    SDL_Color border_color = {99, 160, 220, 180};
+    
+    SDL_Rect header = {10, 5, 780, 22};
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(renderer, bg_color.r, bg_color.g, bg_color.b, bg_color.a);
+    SDL_RenderFillRect(renderer, &header);
+    SDL_SetRenderDrawColor(renderer, border_color.r, border_color.g, border_color.b, border_color.a);
+    SDL_RenderDrawRect(renderer, &header);
+    
+    const char* source_label = "Source array (same for all 5):";
+    draw_label(renderer, font, source_label, title_color, 15, 7);
+    
+    // Draw mini bars inline
+    int label_w = 0;
+    int label_h = 0;
+    int bar_start_x = 270;
+    if (TTF_SizeText(font, source_label, &label_w, &label_h) == 0) {
+        int computed_start = 15 + label_w + 28;
+        if (computed_start > bar_start_x) {
+            bar_start_x = computed_start;
+        }
+    }
+    int bar_y = 8;
+    int bar_h = 16;
+    int bar_spacing = 1;
+    int bar_width = (780 - bar_start_x - 10) / size;
+    if (bar_width < 1) bar_width = 1;
+    
+    for (int i = 0; i < size; i++) {
+        float normalized = array[i] / 600.0f;
+        if (normalized < 0.0f) normalized = 0.0f;
+        if (normalized > 1.0f) normalized = 1.0f;
+        
+        int h = (int)(normalized * bar_h);
+        if (h < 1) h = 1;
+        
+        SDL_Rect bar = {
+            .x = bar_start_x + i * bar_width,
+            .y = bar_y + bar_h - h,
+            .w = bar_width - bar_spacing,
+            .h = h
+        };
+        
+        SDL_SetRenderDrawColor(renderer, 120, 200, 240, 200);
+        SDL_RenderFillRect(renderer, &bar);
+    }
+}
+
+void draw_compare_panel(SDL_Renderer* renderer, TTF_Font* font, const char* title, float* array, int size, Stats stats, SDL_Rect rect, int highlight1, int highlight2) {
+    char info_line[100];
     SDL_Color title_color = {235, 245, 255, 255};
     SDL_Color info_color = {189, 219, 255, 255};
     SDL_Rect panel = rect;
-    SDL_Rect chart_rect = {rect.x + 10, rect.y + 58, rect.w - 20, rect.h - 68};
+    SDL_Rect chart_rect = {rect.x + 8, rect.y + 36, rect.w - 16, rect.h - 58};
+    SDL_Rect stats_panel = {rect.x + 8, rect.y + rect.h - 20, rect.w - 16, 18};
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(renderer, 7, 14, 24, 190);
@@ -176,13 +333,17 @@ void draw_compare_panel(SDL_Renderer* renderer, TTF_Font* font, const char* titl
     SDL_SetRenderDrawColor(renderer, 127, 186, 255, 200);
     SDL_RenderDrawRect(renderer, &panel);
 
-    draw_label(renderer, font, title, title_color, rect.x + 12, rect.y + 10);
+    draw_label(renderer, font, title, title_color, rect.x + 10, rect.y + 8);
 
-    snprintf(info_line, sizeof(info_line), "cmp:%d mem:%d t:%dms",
+    draw_array_in_rect(renderer, array, size, chart_rect, highlight1, highlight2);
+    
+    snprintf(info_line, sizeof(info_line), "c:%d m:%d t:%dms",
              stats.comparisons, stats.memory_accesses, stats.end_time - stats.start_time);
-    draw_label(renderer, font, info_line, info_color, rect.x + 12, rect.y + 32);
-
-    draw_array_in_rect(renderer, array, size, chart_rect);
+    SDL_SetRenderDrawColor(renderer, 5, 10, 18, 220);
+    SDL_RenderFillRect(renderer, &stats_panel);
+    SDL_SetRenderDrawColor(renderer, 99, 180, 255, 180);
+    SDL_RenderDrawRect(renderer, &stats_panel);
+    draw_label(renderer, font, info_line, info_color, rect.x + 12, rect.y + rect.h - 18);
 }
 
 void draw_stats(SDL_Renderer* renderer, TTF_Font* font, Stats stats) {
