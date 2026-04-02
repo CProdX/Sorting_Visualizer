@@ -4,11 +4,10 @@
 #include "utils.h"
 #include "sorting.h"
 
-// NOUVELLE FONCTION QUI GÈRE TOUS LES ÉVÉNEMENTS PENDANT UNE ANIMATION
+// Handle events during animations so the UI stays responsive.
 void handle_animation_events() {
     SDL_Event event;
 
-    // 1. On traite tous les événements en attente (pause, vitesse, quitter)
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) {
             running = false;
@@ -31,26 +30,22 @@ void handle_animation_events() {
         }
     }
 
-    // 2. Si la pause est activée, on entre dans une boucle d'attente
     while (is_paused && running) {
-        // Cette boucle attend qu'on appuie à nouveau sur ESPACE ou qu'on quitte
         while (SDL_PollEvent(&event)) {
              if (event.type == SDL_QUIT) {
                  running = false;
-                 is_paused = false; // Pour sortir de la boucle d'attente
+                 is_paused = false;
              }
              if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_SPACE) {
-                 is_paused = false; // Pour sortir de la boucle d'attente
+                 is_paused = false;
              }
         }
-        SDL_Delay(100); // Repos pour le CPU pendant la pause
+        SDL_Delay(100);
     }
 }
 
 
-//
-// 🔵 Tri à bulles (Bubble Sort)
-//
+// Bubble Sort
 void bubble_sort_step_by_step(SDL_Renderer* renderer, float* array, int size, int window_width, int window_height, Stats* stats) {
     stats->start_time = SDL_GetTicks();
     if (!running) return;
@@ -72,7 +67,7 @@ void bubble_sort_step_by_step(SDL_Renderer* renderer, float* array, int size, in
             draw_array(renderer, array, size, window_width, window_height, j, j + 1);
             SDL_RenderPresent(renderer);
 
-            handle_animation_events(); // <-- APPEL À LA NOUVELLE FONCTION
+            handle_animation_events();
             SDL_Delay(animation_delay);
         }
     }
@@ -80,9 +75,7 @@ void bubble_sort_step_by_step(SDL_Renderer* renderer, float* array, int size, in
     stats->end_time = SDL_GetTicks();
 }
 
-//
-// 🟢 Tri par sélection (Selection Sort)
-//
+// Selection Sort
 void selection_sort_step_by_step(SDL_Renderer* renderer, float* array, int size, int window_width, int window_height, Stats* stats) {
     stats->start_time = SDL_GetTicks();
     if (!running) return;
@@ -102,8 +95,8 @@ void selection_sort_step_by_step(SDL_Renderer* renderer, float* array, int size,
             SDL_RenderClear(renderer);
             draw_array(renderer, array, size, window_width, window_height, i, j);
             SDL_RenderPresent(renderer);
-            handle_animation_events(); // On peut aussi écouter les événements ici
-            SDL_Delay(animation_delay/4); // Délai plus court pour les comparaisons
+            handle_animation_events();
+            SDL_Delay(animation_delay/4);
         }
 
         if (min_index != i) {
@@ -117,7 +110,7 @@ void selection_sort_step_by_step(SDL_Renderer* renderer, float* array, int size,
             draw_array(renderer, array, size, window_width, window_height, i, min_index);
             SDL_RenderPresent(renderer);
 
-            handle_animation_events(); // <-- APPEL À LA NOUVELLE FONCTION
+            handle_animation_events();
             SDL_Delay(animation_delay);
         }
     }
@@ -125,9 +118,7 @@ void selection_sort_step_by_step(SDL_Renderer* renderer, float* array, int size,
     stats->end_time = SDL_GetTicks();
 }
 
-//
-// 🟡 Tri par insertion (Insertion Sort)
-//
+// Insertion Sort
 void insertion_sort_step_by_step(SDL_Renderer* renderer, float* array, int size, int window_width, int window_height, Stats* stats) {
     stats->start_time = SDL_GetTicks();
     if (!running) return;
@@ -148,7 +139,7 @@ void insertion_sort_step_by_step(SDL_Renderer* renderer, float* array, int size,
             SDL_RenderClear(renderer);
             draw_array(renderer, array, size, window_width, window_height, j + 1, i);
             SDL_RenderPresent(renderer);
-            handle_animation_events(); // <-- APPEL À LA NOUVELLE FONCTION
+            handle_animation_events();
             SDL_Delay(animation_delay);
         }
         array[j + 1] = key;
@@ -159,9 +150,7 @@ void insertion_sort_step_by_step(SDL_Renderer* renderer, float* array, int size,
 }
 
 
-//
-// 🔴 Tri rapide (QuickSort) - La fonction visuelle est celle qui doit être modifiée
-//
+// QuickSort
 void quicksort_visual(SDL_Renderer* renderer, float* array, int size, int window_width, int window_height, int a, int b) {
     if (!running) return;
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -169,7 +158,7 @@ void quicksort_visual(SDL_Renderer* renderer, float* array, int size, int window
     draw_array(renderer, array, size, window_width, window_height, a, b);
     SDL_RenderPresent(renderer);
 
-    handle_animation_events(); // <-- APPEL À LA NOUVELLE FONCTION
+    handle_animation_events();
     SDL_Delay(animation_delay);
 }
 
@@ -205,9 +194,7 @@ void quicksort_step_by_step(SDL_Renderer* renderer, float* array, int size, int 
 }
 
 
-//
-// 🟣 Tri fusion (MergeSort) - La fonction visuelle est celle qui doit être modifiée
-//
+// MergeSort
 void mergesort_visual(SDL_Renderer* renderer, float* array, int size, int window_width, int window_height, int left, int right) {
     if (!running) return;
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -215,7 +202,7 @@ void mergesort_visual(SDL_Renderer* renderer, float* array, int size, int window
     draw_array(renderer, array, size, window_width, window_height, left, right);
     SDL_RenderPresent(renderer);
 
-    handle_animation_events(); // <-- APPEL À LA NOUVELLE FONCTION
+    handle_animation_events();
     SDL_Delay(animation_delay);
 }
 

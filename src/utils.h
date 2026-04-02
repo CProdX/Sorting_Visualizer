@@ -3,8 +3,8 @@
 
 #include <SDL2/SDL.h>
 #include <stdbool.h>
-// Déclarations des variables globales pour le contrôle de l'animation
-    extern bool is_paused;
+// Global animation control variables.
+extern bool is_paused;
 extern int animation_delay;
 extern bool running;
 typedef struct {

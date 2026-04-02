@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include <time.h>
+#include <string.h>
 #include "utils.h"
 
 const char* names[] = {
@@ -10,8 +10,14 @@ const char* names[] = {
 void generate_students(Student* array, int size) {
     for (int i = 0; i < size; i++) {
         strcpy(array[i].name, names[rand() % 10]);
-        array[i].age = 18 + rand() % 13;           // 18–30
-        array[i].grade = ((float)rand() / RAND_MAX) * 20.0f; // 0–20
+        array[i].age = 18 + rand() % 13;
+        array[i].grade = ((float)rand() / RAND_MAX) * 20.0f;
+    }
+}
+
+void generate_random_array(int* array, int size, int max_value) {
+    for (int i = 0; i < size; i++) {
+        array[i] = rand() % (max_value + 1);
     }
 }
 
@@ -114,7 +120,7 @@ int compare_by_age(Student a, Student b) {
 }
 
 int compare_by_grade(Student a, Student b) {
-    return (a.grade > b.grade) - (a.grade < b.grade); // renvoie -1, 0 ou 1
+    return (a.grade > b.grade) - (a.grade < b.grade);
 }
 
 int compare_by_name(Student a, Student b) {

@@ -8,10 +8,11 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/mnt/c/Users/Christian/Desktop/sorting_visualizer/src/main.c" "CMakeFiles/sorting_visualizer.dir/src/main.c.o" "gcc" "CMakeFiles/sorting_visualizer.dir/src/main.c.o.d"
-  "/mnt/c/Users/Christian/Desktop/sorting_visualizer/src/sorting.c" "CMakeFiles/sorting_visualizer.dir/src/sorting.c.o" "gcc" "CMakeFiles/sorting_visualizer.dir/src/sorting.c.o.d"
-  "/mnt/c/Users/Christian/Desktop/sorting_visualizer/src/utils.c" "CMakeFiles/sorting_visualizer.dir/src/utils.c.o" "gcc" "CMakeFiles/sorting_visualizer.dir/src/utils.c.o.d"
-  "/mnt/c/Users/Christian/Desktop/sorting_visualizer/src/visual.c" "CMakeFiles/sorting_visualizer.dir/src/visual.c.o" "gcc" "CMakeFiles/sorting_visualizer.dir/src/visual.c.o.d"
+  "/mnt/c/Users/CProdX/Desktop/1/src/main.c" "CMakeFiles/sorting_visualizer.dir/src/main.c.o" "gcc" "CMakeFiles/sorting_visualizer.dir/src/main.c.o.d"
+  "/mnt/c/Users/CProdX/Desktop/1/src/sorting.c" "CMakeFiles/sorting_visualizer.dir/src/sorting.c.o" "gcc" "CMakeFiles/sorting_visualizer.dir/src/sorting.c.o.d"
+  "/mnt/c/Users/CProdX/Desktop/1/src/utils.c" "CMakeFiles/sorting_visualizer.dir/src/utils.c.o" "gcc" "CMakeFiles/sorting_visualizer.dir/src/utils.c.o.d"
+  "/mnt/c/Users/CProdX/Desktop/1/src/visual.c" "CMakeFiles/sorting_visualizer.dir/src/visual.c.o" "gcc" "CMakeFiles/sorting_visualizer.dir/src/visual.c.o.d"
+  "" "sorting_visualizer" "gcc" "CMakeFiles/sorting_visualizer.dir/link.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

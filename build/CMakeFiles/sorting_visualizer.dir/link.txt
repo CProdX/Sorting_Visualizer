@@ -1,1 +1,1 @@
-/usr/bin/cc CMakeFiles/sorting_visualizer.dir/src/main.c.o CMakeFiles/sorting_visualizer.dir/src/utils.c.o CMakeFiles/sorting_visualizer.dir/src/visual.c.o CMakeFiles/sorting_visualizer.dir/src/sorting.c.o -o sorting_visualizer  -lSDL2 -lSDL2_ttf 
+/usr/sbin/cc -Wl,--dependency-file=CMakeFiles/sorting_visualizer.dir/link.d CMakeFiles/sorting_visualizer.dir/src/main.c.o CMakeFiles/sorting_visualizer.dir/src/utils.c.o CMakeFiles/sorting_visualizer.dir/src/visual.c.o CMakeFiles/sorting_visualizer.dir/src/sorting.c.o -o sorting_visualizer  -lSDL2 -lSDL2_ttf

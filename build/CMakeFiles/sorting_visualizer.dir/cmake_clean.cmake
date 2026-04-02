@@ -1,4 +1,5 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/sorting_visualizer.dir/link.d"
   "CMakeFiles/sorting_visualizer.dir/src/main.c.o"
   "CMakeFiles/sorting_visualizer.dir/src/main.c.o.d"
   "CMakeFiles/sorting_visualizer.dir/src/sorting.c.o"

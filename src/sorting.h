@@ -2,21 +2,21 @@
 #define SORTING_H
 
 #include <SDL2/SDL.h>
-#include "utils.h"  // Pour Stats
+#include "utils.h"  // For Stats
 
-// Tri à bulles
+// Bubble Sort
 void bubble_sort_step_by_step(SDL_Renderer* renderer, float* array, int size, int window_width, int window_height, Stats* stats);
 
-// Tri par sélection
+// Selection Sort
 void selection_sort_step_by_step(SDL_Renderer* renderer, float* array, int size, int window_width, int window_height, Stats* stats);
 
-// Tri par insertion
+// Insertion Sort
 void insertion_sort_step_by_step(SDL_Renderer* renderer, float* array, int size, int window_width, int window_height, Stats* stats);
 
-// Tri rapide
+// QuickSort
 void quicksort_step_by_step(SDL_Renderer* renderer, float* array, int size, int window_width, int window_height, int low, int high, Stats* stats);
 
-// Tri fusion
+// MergeSort
 void mergesort_step_by_step(SDL_Renderer* renderer, float* array, int size, int window_width, int window_height, int left, int right, Stats* stats);
 
 
