@@ -1,0 +1,3 @@
+/mnt/c/Users/Christian/Desktop/sorting_visualizer/build/CMakeFiles/sorting_visualizer.dir
+/mnt/c/Users/Christian/Desktop/sorting_visualizer/build/CMakeFiles/edit_cache.dir
+/mnt/c/Users/Christian/Desktop/sorting_visualizer/build/CMakeFiles/rebuild_cache.dir
