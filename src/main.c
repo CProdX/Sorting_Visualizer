@@ -559,13 +559,9 @@ static SDL_Keycode mode_key_from_point(int x, int y) {
 }
 
 static SDL_Keycode control_key_from_point(int x, int y) {
-    // Reset button
-    if (x >= 20 && x < 240 && y >= 540 && y < 580) {
+    // Centered reset button
+    if (x >= 290 && x < 510 && y >= 540 && y < 580) {
         return SDLK_r;
-    }
-    // Menu button
-    if (x >= 560 && x < 780 && y >= 540 && y < 580) {
-        return SDLK_m;
     }
     return SDLK_UNKNOWN;
 }
@@ -744,19 +740,6 @@ int main() {
                     continue;
                 }
 
-                // Return to menu with 'M'
-                if (mode_selected && event.key.keysym.sym == SDLK_m) {
-                    mode_selected = false;
-                    sorted = false;
-                    is_student_mode = false;
-                    is_compare_mode = false;
-                    stats = (Stats){0, 0, 0, 0};
-                    compare_view.ready = false;
-                    compare_view.animating = false;
-                    generate_array(menu_preview, ARRAY_SIZE, WINDOW_HEIGHT, MODE_PYRAMID);
-                    continue;
-                }
-
                 if (!mode_selected) {
                     apply_mode_selection(event.key.keysym.sym, &current_mode, &is_student_mode, &is_compare_mode, &mode_selected, array, students, &compare_view);
                 } else if (!sorted && !is_compare_mode) {
@@ -769,18 +752,9 @@ int main() {
                 if (!mode_selected) {
                     apply_mode_selection(key, &current_mode, &is_student_mode, &is_compare_mode, &mode_selected, array, students, &compare_view);
                 } else {
-                    // Check control buttons (reset/menu)
+                    // Check control button (reset)
                     SDL_Keycode ctrl_key = control_key_from_point(event.button.x, event.button.y);
                     if (ctrl_key == SDLK_r) {
-                        mode_selected = false;
-                        sorted = false;
-                        is_student_mode = false;
-                        is_compare_mode = false;
-                        stats = (Stats){0, 0, 0, 0};
-                        compare_view.ready = false;
-                        compare_view.animating = false;
-                        generate_array(menu_preview, ARRAY_SIZE, WINDOW_HEIGHT, MODE_PYRAMID);
-                    } else if (ctrl_key == SDLK_m) {
                         mode_selected = false;
                         sorted = false;
                         is_student_mode = false;
@@ -800,18 +774,9 @@ int main() {
                 if (!mode_selected) {
                     apply_mode_selection(key, &current_mode, &is_student_mode, &is_compare_mode, &mode_selected, array, students, &compare_view);
                 } else {
-                    // Check control buttons (reset/menu) via touch
+                    // Check control button (reset) via touch
                     SDL_Keycode ctrl_key = control_key_from_point(x, y);
                     if (ctrl_key == SDLK_r) {
-                        mode_selected = false;
-                        sorted = false;
-                        is_student_mode = false;
-                        is_compare_mode = false;
-                        stats = (Stats){0, 0, 0, 0};
-                        compare_view.ready = false;
-                        compare_view.animating = false;
-                        generate_array(menu_preview, ARRAY_SIZE, WINDOW_HEIGHT, MODE_PYRAMID);
-                    } else if (ctrl_key == SDLK_m) {
                         mode_selected = false;
                         sorted = false;
                         is_student_mode = false;
@@ -912,11 +877,9 @@ int main() {
             int mouse_y = 0;
             SDL_GetMouseState(&mouse_x, &mouse_y);
             
-            bool reset_highlighted = (mouse_x >= 20 && mouse_x < 240 && mouse_y >= 540 && mouse_y < 580);
-            bool menu_highlighted = (mouse_x >= 560 && mouse_x < 780 && mouse_y >= 540 && mouse_y < 580);
+            bool reset_highlighted = (mouse_x >= 290 && mouse_x < 510 && mouse_y >= 540 && mouse_y < 580);
             
-            draw_button(renderer, font, "Press R to reset", (SDL_Rect){20, 540, 220, 40}, reset_highlighted);
-            draw_button(renderer, font, "Press M for menu", (SDL_Rect){560, 540, 220, 40}, menu_highlighted);
+            draw_button(renderer, font, "Press R to reset", (SDL_Rect){290, 540, 220, 40}, reset_highlighted);
         }
 
         SDL_RenderPresent(renderer);

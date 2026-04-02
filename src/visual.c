@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <string.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include "visual.h"
@@ -18,23 +17,6 @@ static void draw_vertical_gradient(SDL_Renderer* renderer, int width, int height
 
 static void draw_label(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color, int x, int y);
 static void draw_label_solid(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color color, int x, int y);
-static void draw_label_bold(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color fg, SDL_Color shadow, int x, int y);
-
-static int load_ascii_art_lines(char lines[][256], int max_lines) {
-    FILE* fp = fopen("asciiart-fr.txt", "r");
-    if (!fp) {
-        return 0;
-    }
-
-    int count = 0;
-    while (count < max_lines && fgets(lines[count], 256, fp) != NULL) {
-        lines[count][strcspn(lines[count], "\r\n")] = '\0';
-        count++;
-    }
-
-    fclose(fp);
-    return count;
-}
 
 void draw_neutral_background(SDL_Renderer* renderer) {
     SDL_Color bg_top = {14, 28, 50, 255};
@@ -47,36 +29,15 @@ void draw_menu_preview(SDL_Renderer* renderer, TTF_Font* font, float* array, int
     (void)size;
 
     SDL_Color title_color = {236, 255, 244, 255};
-    SDL_Rect panel = {18, 16, 764, 158};
+    const char* title = "SORTING VISUALIZOR";
+    SDL_Rect top_zone = {0, 0, 800, 188};
+    int w = 0;
+    int h = 0;
 
-    static bool loaded = false;
-    static int line_count = 0;
-    static char file_lines[24][256];
-
-    if (!loaded) {
-        line_count = load_ascii_art_lines(file_lines, 24);
-        loaded = true;
-    }
-
-    int y = 24;
-    if (line_count > 0) {
-        for (int i = 0; i < line_count; i++) {
-            int w = 0;
-            int h = 0;
-            if (TTF_SizeText(font, file_lines[i], &w, &h) == 0) {
-                int x = panel.x + (panel.w - w) / 2;
-                draw_label_solid(renderer, font, file_lines[i], title_color, x, y);
-            }
-            y += 22;
-        }
-    } else {
-        const char* missing = "asciiart-fr.txt not found or empty";
-        int w = 0;
-        int h = 0;
-        if (TTF_SizeText(font, missing, &w, &h) == 0) {
-            int x = panel.x + (panel.w - w) / 2;
-            draw_label_solid(renderer, font, missing, title_color, x, y + 32);
-        }
+    if (TTF_SizeText(font, title, &w, &h) == 0) {
+        int x = top_zone.x + (top_zone.w - w) / 2;
+        int y = top_zone.y + (top_zone.h - h) / 2;
+        draw_label_solid(renderer, font, title, title_color, x, y);
     }
 }
 
@@ -122,11 +83,6 @@ static void draw_label_solid(SDL_Renderer* renderer, TTF_Font* font, const char*
 
     SDL_FreeSurface(surface);
     SDL_DestroyTexture(texture);
-}
-
-static void draw_label_bold(SDL_Renderer* renderer, TTF_Font* font, const char* text, SDL_Color fg, SDL_Color shadow, int x, int y) {
-    draw_label_solid(renderer, font, text, shadow, x + 1, y + 1);
-    draw_label_solid(renderer, font, text, fg, x, y);
 }
 
 void draw_button(SDL_Renderer* renderer, TTF_Font* font, const char* label, SDL_Rect rect, bool highlighted) {
